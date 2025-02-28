@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -84,6 +86,25 @@ func LoadYAMLFile(path string) (map[string]interface{}, error) {
 	return content, nil
 }
 
-func LoadYAMLFromURL(url string) ([]byte, error) {
-	return nil, nil
+func LoadYAMLFromURL(url string) (map[string]interface{}, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to GET from URL %q: %w", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received non-OK HTTP status %s from URL %q", resp.Status, url)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body from URL %q: %w", url, err)
+	}
+	if len(data) == 0 {
+		return nil, ErrEmptyFile
+	}
+	var content map[string]interface{}
+	if err := yaml.Unmarshal(data, &content); err != nil {
+		return nil, ErrUnmarshalError
+	}
+	return content, nil
 }

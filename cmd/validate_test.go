@@ -2,15 +2,21 @@ package cmd
 
 import (
 	"encoding/json"
+	"reflect"
+
 	// "fmt"
 	"os"
 	"testing"
+
 )
 
 const (
-  schema = "./fixtures/Schema.yaml"
-  testYAML = "./fixtures/ValidYAML.yaml"
+	schema          = "./fixtures/Schema.yaml"
+	testYAML        = "./fixtures/ValidYAML.yaml"
 	testInvalidYaml = "./fixtures/InvalidYAML.yaml"
+	validSchemaUrl  = "https://raw.githubusercontent.com/phoebus-84/kaa/refs/heads/main/cmd/fixtures/Schema.yaml"
+	validYAMLURL    = "https://raw.githubusercontent.com/phoebus-84/kaa/refs/heads/main/cmd/fixtures/ValidYAML.yaml"
+	invalidUrl      = "http://invalid-url"
 )
 
 func ExpectError(t *testing.T, err error, msg string) {
@@ -123,7 +129,16 @@ func TestLoadYAMLFromUrl(t *testing.T) {
 	})
 
 	t.Run("valid URL", func(t *testing.T) {
-		// Skip this test as it requires a valid URL
-		t.Skip("Skipping test that requires a valid URL")
+		content, err := LoadYAMLFromURL(validSchemaUrl)
+		if err != nil {
+			t.Fatalf("Expected no error, but got: %v", err)
+		}
+		if len(content) == 0 {
+			t.Errorf("Expected non-empty data, but got empty")
+		}
+		jsonSchema, _ := LoadYAMLFile(schema)
+		if !reflect.DeepEqual(jsonSchema, content) {
+			t.Errorf("Expected data to match schema, but got different data")
+		}
 	})
 }
