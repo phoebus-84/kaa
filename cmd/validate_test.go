@@ -8,38 +8,9 @@ import (
 )
 
 const (
-	testYAMLSchema = `
-$schema: "http://json-schema.org/draft-07/schema#"
-type: object
-required:
-  - serviceName
-  - version
-  - replicas
-properties:
-  serviceName:
-    type: string
-    pattern: "^[a-zA-Z0-9-]+$"
-    description: "Name of the service (letters, numbers, and hyphens only)."
-  version:
-    type: string
-    pattern: "^\\d+\\.\\d+\\.\\d+$"
-    description: "Semantic version number (e.g., 1.2.3)."
-  replicas:
-    type: integer
-    minimum: 1
-    maximum: 100
-    description: "Number of instances to run (between 1 and 100)."
-`
-	testYAML = `
-serviceName: "user-service"
-version: "1.2.3"
-replicas: 3
-`
-	testInvalidYaml = `
-serviceName: "user_service"
-version: "1.2"
-replicas: 0
-`
+  schema = "./fixtures/Schema.yaml"
+  testYAML = "./fixtures/ValidYAML.yaml"
+	testInvalidYaml = "./fixtures/InvalidYAML.yaml"
 )
 
 func ExpectError(t *testing.T, err error, msg string) {
@@ -67,18 +38,14 @@ func CreateTempFile(t *testing.T, prefix string, content string) *os.File {
 
 func TestValidateYAML(t *testing.T) {
 	t.Run("valid YAML", func(t *testing.T) {
-		schemaFile := CreateTempFile(t, "schema", testYAMLSchema)
-		yamlFile := CreateTempFile(t, "valid_yaml", testYAML)
-		err := ValidateYAML(yamlFile.Name(), schemaFile.Name())
+		err := ValidateYAML(testYAML, schema)
 		if err != nil {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("invalid YAML", func(t *testing.T) {
-		schemaFile := CreateTempFile(t, "schema", testYAMLSchema)
-		invalidYAMLFile := CreateTempFile(t, "invalid_yaml", testInvalidYaml)
-		err := ValidateYAML(invalidYAMLFile.Name(), schemaFile.Name())
+		err := ValidateYAML(testInvalidYaml, schema)
 		if err == nil {
 			t.Errorf("Expected an error, but got nil")
 		}
@@ -86,13 +53,13 @@ func TestValidateYAML(t *testing.T) {
 }
 
 func ExampleValidateYAML() {
-  // schemaFile := CreateTempFile(t, "schema", testYAMLSchema)
-  // yamlFile := CreateTempFile(t, "valid_yaml", testYAML)
-  // err := ValidateYAML(yamlFile.Name(), schemaFile.Name())
-  // if err != nil {
-  //   fmt.Println(err)
-  // }
-  // Output:
+	// schemaFile := CreateTempFile(t, "schema", testYAMLSchema)
+	// yamlFile := CreateTempFile(t, "valid_yaml", testYAML)
+	// err := ValidateYAML(yamlFile.Name(), schemaFile.Name())
+	// if err != nil {
+	//   fmt.Println(err)
+	// }
+	// Output:
 }
 
 func TestLoadYAMLSchema(t *testing.T) {
@@ -122,8 +89,7 @@ func TestLoadYAMLSchema(t *testing.T) {
 	})
 
 	t.Run("valid schema", func(t *testing.T) {
-		validSchemaFile := CreateTempFile(t, "valid_schema", testYAMLSchema)
-		jsonSchema, err := loadYAMLSchema(validSchemaFile.Name())
+		jsonSchema, err := loadYAMLSchema(schema)
 		if err != nil {
 			t.Fatalf("Expected no error, but got: %v", err)
 		}
@@ -138,5 +104,26 @@ func TestLoadYAMLSchema(t *testing.T) {
 				t.Errorf("Expected key %q in converted JSON, but it was not found", key)
 			}
 		}
+	})
+}
+
+func TestLoadYAMLFromUrl(t *testing.T) {
+	t.Run("non-existent URL", func(t *testing.T) {
+		_, err := LoadYAMLFromURL("http://non-existent-url.com")
+		if err == nil {
+			t.Errorf("Expected an error when loading from non-existent URL, but got nil")
+		}
+	})
+
+	t.Run("invalid URL", func(t *testing.T) {
+		_, err := LoadYAMLFromURL("http://invalid-url")
+		if err == nil {
+			t.Errorf("Expected an error when loading from invalid URL, but got nil")
+		}
+	})
+
+	t.Run("valid URL", func(t *testing.T) {
+		// Skip this test as it requires a valid URL
+		t.Skip("Skipping test that requires a valid URL")
 	})
 }

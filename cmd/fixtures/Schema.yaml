@@ -1,0 +1,20 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+type: object
+required:
+  - serviceName
+  - version
+  - replicas
+properties:
+  serviceName:
+    type: string
+    pattern: "^[a-zA-Z0-9-]+$"
+    description: "Name of the service (letters, numbers, and hyphens only)."
+  version:
+    type: string
+    pattern: "^\\d+\\.\\d+\\.\\d+$"
+    description: "Semantic version number (e.g., 1.2.3)."
+  replicas:
+    type: integer
+    minimum: 1
+    maximum: 100
+    description: "Number of instances to run (between 1 and 100)."

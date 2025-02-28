@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 )
@@ -15,22 +16,17 @@ func (e ValidationErr) Error() string {
 }
 
 const (
-	ErrEmptyFile        = ValidationErr("YAML file is empty")
-	ErrInvalidSchema    = ValidationErr("Schema file is invalid")
+	ErrEmptyFile      = ValidationErr("YAML file is empty")
+	ErrInvalidSchema  = ValidationErr("Schema file is invalid")
 	ErrUnmarshalError = ValidationErr("could not unmarshal YAML")
-	ErrInvalidYAML = ValidationErr("YAML file is invalid")
+	ErrInvalidYAML    = ValidationErr("YAML file is invalid")
 )
 
 func ValidateYAML(yamlFile string, schemaFile string) error {
-	yamlData, err := os.ReadFile(yamlFile)
+	yamlContent, err := LoadYAMLFile(yamlFile)
 	if err != nil {
-		return fmt.Errorf("could not read YAML file: %w", err)
+		return err
 	}
-	var yamlContent map[string]interface{}
-	if err := yaml.Unmarshal(yamlData, &yamlContent); err != nil {
-		return fmt.Errorf("could not parse YAML: %w", err)
-	}
-
 	jsonBytes, err := json.Marshal(yamlContent)
 	if err != nil {
 		return fmt.Errorf("could not convert YAML to JSON: %w", err)
@@ -55,21 +51,16 @@ func ValidateYAML(yamlFile string, schemaFile string) error {
 		}
 		return ErrInvalidYAML
 	}
-
 	return nil
 }
 
 func loadYAMLSchema(schemaPath string) (string, error) {
-	data, err := os.ReadFile(schemaPath)
+	schema, err := LoadYAMLFile(schemaPath)
+	if err == ErrUnmarshalError {
+		return "", ErrInvalidSchema
+	}
 	if err != nil {
 		return "", err
-	}
-	if len(data) == 0 {
-		return "", ErrEmptyFile
-	}
-	var schema interface{}
-	if err := yaml.Unmarshal(data, &schema); err != nil {
-		return "", ErrInvalidSchema
 	}
 	jsonBytes, err := json.Marshal(schema)
 	if err != nil {
@@ -78,3 +69,21 @@ func loadYAMLSchema(schemaPath string) (string, error) {
 	return string(jsonBytes), nil
 }
 
+func LoadYAMLFile(path string) (map[string]interface{}, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, ErrEmptyFile
+	}
+	var content map[string]interface{}
+	if err := yaml.Unmarshal(data, &content); err != nil {
+		return nil, ErrUnmarshalError
+	}
+	return content, nil
+}
+
+func LoadYAMLFromURL(url string) ([]byte, error) {
+	return nil, nil
+}
