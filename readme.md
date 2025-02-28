@@ -37,12 +37,12 @@
 go build
 ```
 
-Usage:
-  kaa validate [file|url] [flags]
-
-Flags:
-  -h, --help                help for validate
-  -s, --schema string       Path to the JSON Schema file
+Usage:\
+  kaa validate [file|url] [flags]\
+\
+Flags:\
+  -h, --help                help for validate\
+  -s, --schema string       Path to the JSON Schema file\
   -u, --schema-url string   URL to the JSON Schema file
 
 **[🔝 back to top](#toc)**
