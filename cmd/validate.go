@@ -142,7 +142,7 @@ var schemaFile string
 var schemaUrl string
 
 var validateCmd = &cobra.Command{
-	Use:   "validate [file]",
+	Use:   "validate [file|url]",
 	Short: "Validate a YAML file against a schema",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
