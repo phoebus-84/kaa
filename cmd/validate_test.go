@@ -162,9 +162,9 @@ func ExampleValidateYAML() {
 	ValidateYAML(fileToBeValidated, schema, &buffer)
   fmt.Printf("%s", buffer.String())
 	// Output:
+  // - version: Does not match pattern '^\d+\.\d+\.\d+$'
   // - replicas: Must be greater than or equal to 1
   // - serviceName: Does not match pattern '^[a-zA-Z0-9-]+$'
-  // - version: Does not match pattern '^\d+\.\d+\.\d+$'
 }
 
 func ExampleLoadYAMLSchema() {

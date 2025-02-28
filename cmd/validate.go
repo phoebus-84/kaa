@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
 	"github.com/spf13/cobra"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
@@ -34,23 +33,13 @@ func ValidateYAML(fileToBeValidated []byte, schema string, args ...io.Writer) er
 	} else {
 		w = args[0]
 	}
-	// fileToBeVAlidated, err := LoadYAMLFile(yamlFile)
-	// if err != nil {
-	// 	return err
-	// }
-	// schema, err := LoadYAMLSchema(schemaFile)
-	// if err != nil {
-	// 	return err
-	// }
 	schemaLoader := gojsonschema.NewStringLoader(schema)
-
 	documentLoader := gojsonschema.NewBytesLoader(fileToBeValidated)
-
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
+		fmt.Fprintf(w, "Error validating YAML: %v\n", err)
 		return ErrInvalidYAML
 	}
-
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
 			fmt.Fprintf(w, "- %s\n", desc)
