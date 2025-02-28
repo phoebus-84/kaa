@@ -1,13 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 
 	// "fmt"
 	"os"
 	"testing"
-
 )
 
 const (
@@ -51,7 +51,16 @@ func TestValidateYAML(t *testing.T) {
 	})
 
 	t.Run("invalid YAML", func(t *testing.T) {
-		err := ValidateYAML(testInvalidYaml, schema)
+		buffer := bytes.Buffer{}
+		err := ValidateYAML(testInvalidYaml, schema, &buffer)
+		got := buffer.String()
+		want := `- replicas: Must be greater than or equal to 1
+- serviceName: Does not match pattern '^[a-zA-Z0-9-]+$'
+- version: Does not match pattern '^\d+\.\d+\.\d+$'
+`
+		if got != want {
+			t.Errorf("got %q want %q", got, want)
+		}
 		if err == nil {
 			t.Errorf("Expected an error, but got nil")
 		}

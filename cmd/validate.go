@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 )
@@ -24,7 +25,13 @@ const (
 	ErrJSONMarshal    = ValidationErr("Cannot marshal YAML into JSON")
 )
 
-func ValidateYAML(yamlFile string, schemaFile string) error {
+func ValidateYAML(yamlFile string, schemaFile string, args ...io.Writer) error {
+	var w io.Writer
+	if len(args) < 1 {
+		w = os.Stdout
+	} else {
+		w = args[0]
+	}
 	fileToBeVAlidated, err := LoadYAMLFile(yamlFile)
 	if err != nil {
 		return err
@@ -41,10 +48,10 @@ func ValidateYAML(yamlFile string, schemaFile string) error {
 	if err != nil {
 		return ErrInvalidYAML
 	}
-
+	
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
-			fmt.Printf("- %s\n", desc)
+			fmt.Fprintf(w, "- %s\n", desc)
 		}
 		return ErrInvalidYAML
 	}
