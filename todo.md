@@ -1,0 +1,11 @@
+- coobra hello word
+- get an url or a file as an input:
+    - ask for a file
+    - read the file
+    - validate the fila as yaml
+    - read an url
+    - get the content via url
+    - validate the url as yaml
+    - put those things together
+- validate the content
+- add help
