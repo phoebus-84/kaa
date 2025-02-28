@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	schema          = "./fixtures/Schema.yaml"
+	schemaPath      = "./fixtures/Schema.yaml"
 	testYAML        = "./fixtures/ValidYAML.yaml"
 	testInvalidYaml = "./fixtures/InvalidYAML.yaml"
 	validSchemaUrl  = "https://raw.githubusercontent.com/phoebus-84/kaa/refs/heads/main/cmd/fixtures/Schema.yaml"
@@ -43,16 +43,28 @@ func CreateTempFile(t *testing.T, prefix string, content string) *os.File {
 }
 
 func TestValidateYAML(t *testing.T) {
+	schema, err := LoadYAMLSchema(schemaPath)
+	if err != nil {
+		t.Fatalf("Expected no error, but got: %v", err)
+	}
 	t.Run("valid YAML", func(t *testing.T) {
-		err := ValidateYAML(testYAML, schema)
+		fileToBeValidated, err := LoadYAMLFile(testYAML)
 		if err != nil {
+			t.Fatalf("Expected no error, but got: %v", err)
+		}
+		errV := ValidateYAML(fileToBeValidated, schema)
+		if errV != nil {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("invalid YAML", func(t *testing.T) {
 		buffer := bytes.Buffer{}
-		err := ValidateYAML(testInvalidYaml, schema, &buffer)
+    fileToBeValidated, err := LoadYAMLFile(testInvalidYaml)
+    if err != nil {
+      t.Fatalf("Expected no error, but got: %v", err)
+    }
+		errV := ValidateYAML(fileToBeValidated, schema, &buffer)
 		got := buffer.String()
 		want := `- replicas: Must be greater than or equal to 1
 - serviceName: Does not match pattern '^[a-zA-Z0-9-]+$'
@@ -61,7 +73,7 @@ func TestValidateYAML(t *testing.T) {
 		if got != want {
 			t.Errorf("got %q want %q", got, want)
 		}
-		if err == nil {
+		if errV == nil {
 			t.Errorf("Expected an error, but got nil")
 		}
 	})
@@ -104,7 +116,7 @@ func TestLoadYAMLSchema(t *testing.T) {
 	})
 
 	t.Run("valid schema", func(t *testing.T) {
-		jsonSchema, err := LoadYAMLFile(schema)
+		jsonSchema, err := LoadYAMLFile(schemaPath)
 		if err != nil {
 			t.Fatalf("Expected no error, but got: %v", err)
 		}
@@ -145,7 +157,7 @@ func TestLoadYAMLFromUrl(t *testing.T) {
 		if len(content) == 0 {
 			t.Errorf("Expected non-empty data, but got empty")
 		}
-		jsonSchema, _ := LoadYAMLFile(schema)
+		jsonSchema, _ := LoadYAMLFile(schemaPath)
 		if !reflect.DeepEqual(jsonSchema, content) {
 			t.Errorf("Expected data to match schema, but got different data")
 		}
