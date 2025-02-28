@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 )
@@ -22,25 +21,21 @@ const (
 	ErrInvalidSchema  = ValidationErr("Schema file is invalid")
 	ErrUnmarshalError = ValidationErr("could not unmarshal YAML")
 	ErrInvalidYAML    = ValidationErr("YAML file is invalid")
+	ErrJSONMarshal    = ValidationErr("Cannot marshal YAML into JSON")
 )
 
 func ValidateYAML(yamlFile string, schemaFile string) error {
-	yamlContent, err := LoadYAMLFile(yamlFile)
+	fileToBeVAlidated, err := LoadYAMLFile(yamlFile)
 	if err != nil {
 		return err
 	}
-	jsonBytes, err := json.Marshal(yamlContent)
+	schema, err := LoadYAMLSchema(schemaFile)
 	if err != nil {
-		return fmt.Errorf("could not convert YAML to JSON: %w", err)
+		return err
 	}
+	schemaLoader := gojsonschema.NewStringLoader(schema)
 
-	schemaJSON, err := loadYAMLSchema(schemaFile)
-	if err != nil {
-		return fmt.Errorf("could not load schema: %w", err)
-	}
-	schemaLoader := gojsonschema.NewStringLoader(schemaJSON)
-
-	documentLoader := gojsonschema.NewBytesLoader(jsonBytes)
+	documentLoader := gojsonschema.NewBytesLoader(fileToBeVAlidated)
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
@@ -56,22 +51,7 @@ func ValidateYAML(yamlFile string, schemaFile string) error {
 	return nil
 }
 
-func loadYAMLSchema(schemaPath string) (string, error) {
-	schema, err := LoadYAMLFile(schemaPath)
-	if err == ErrUnmarshalError {
-		return "", ErrInvalidSchema
-	}
-	if err != nil {
-		return "", err
-	}
-	jsonBytes, err := json.Marshal(schema)
-	if err != nil {
-		return "", err
-	}
-	return string(jsonBytes), nil
-}
-
-func LoadYAMLFile(path string) (map[string]interface{}, error) {
+func LoadYAMLFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -83,10 +63,30 @@ func LoadYAMLFile(path string) (map[string]interface{}, error) {
 	if err := yaml.Unmarshal(data, &content); err != nil {
 		return nil, ErrUnmarshalError
 	}
-	return content, nil
+	jsonBytes, err := json.Marshal(content)
+	if err != nil {
+		return nil, ErrJSONMarshal
+	}
+	return jsonBytes, nil
 }
 
-func LoadYAMLFromURL(url string) (map[string]interface{}, error) {
+func LoadYAMLSchema(path string) (string, error) {
+	jsonBytes, err := LoadYAMLFile(path)
+	switch err {
+	case ErrEmptyFile:
+		return "", ErrEmptyFile
+	case ErrUnmarshalError:
+		return "", ErrInvalidSchema
+	case ErrJSONMarshal:
+		return "", ErrJSONMarshal
+	case nil:
+		return string(jsonBytes), nil
+	default:
+		return "", err
+	}
+}
+
+func LoadYAMLFromURL(url string) ([]byte, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to GET from URL %q: %w", url, err)
@@ -106,5 +106,9 @@ func LoadYAMLFromURL(url string) (map[string]interface{}, error) {
 	if err := yaml.Unmarshal(data, &content); err != nil {
 		return nil, ErrUnmarshalError
 	}
-	return content, nil
+	jsonBytes, err := json.Marshal(content)
+	if err != nil {
+		return nil, ErrJSONMarshal
+	}
+	return jsonBytes, nil
 }

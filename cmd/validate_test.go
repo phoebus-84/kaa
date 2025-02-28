@@ -71,7 +71,7 @@ func ExampleValidateYAML() {
 func TestLoadYAMLSchema(t *testing.T) {
 	t.Run("non-existent file", func(t *testing.T) {
 		nonExistentFile := "/path/to/non/existent/file.yaml"
-		_, err := loadYAMLSchema(nonExistentFile)
+		_, err := LoadYAMLSchema(nonExistentFile)
 		if err == nil {
 			t.Errorf("Expected an error when loading non-existent file, but got nil")
 		}
@@ -84,18 +84,18 @@ func TestLoadYAMLSchema(t *testing.T) {
 		}
 		defer os.Remove(emptyFile.Name())
 		defer emptyFile.Close()
-		_, err = loadYAMLSchema(emptyFile.Name())
+		_, err = LoadYAMLSchema(emptyFile.Name())
 		ExpectError(t, err, ErrEmptyFile.Error())
 	})
 
 	t.Run("invalid YAML", func(t *testing.T) {
 		invalidYAMLFile := CreateTempFile(t, "invalid_yaml", "invalid: yaml: content:")
-		_, err := loadYAMLSchema(invalidYAMLFile.Name())
+		_, err := LoadYAMLSchema(invalidYAMLFile.Name())
 		ExpectError(t, err, ErrInvalidSchema.Error())
 	})
 
 	t.Run("valid schema", func(t *testing.T) {
-		jsonSchema, err := loadYAMLSchema(schema)
+		jsonSchema, err := LoadYAMLFile(schema)
 		if err != nil {
 			t.Fatalf("Expected no error, but got: %v", err)
 		}
