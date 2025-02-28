@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/xeipuuv/gojsonschema"
@@ -138,6 +139,7 @@ func LoadYAMLSchemaFromURL(url string) (string, error) {
 }
 
 var schemaFile string
+var schemaUrl string
 
 var validateCmd = &cobra.Command{
 	Use:   "validate [file]",
@@ -146,21 +148,42 @@ var validateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		yamlFile := args[0]
 
-		if schemaFile == "" {
-			fmt.Println("Schema file is required. Use --schema to specify.")
+		if schemaFile == "" && schemaUrl == "" {
+			fmt.Println("Schema file is required. Use --schema to specify a schema file or --schema-url to specify a URL to a schema file.")
 			os.Exit(1)
 		}
-		fileToBeValidated, err := LoadYAMLFile(yamlFile)
-		if err != nil {
-			fmt.Printf("Failed to load YAML file: %v\n", err)
-			os.Exit(1)
+		var schema string
+		if schemaFile != "" {
+			s, err := LoadYAMLSchema(schemaFile)
+			if err != nil {
+				fmt.Printf("Failed to load schema file: %v\n", err)
+				os.Exit(1)
+			}
+			schema = s
+		} else {
+			s, err := LoadYAMLSchemaFromURL(schemaUrl)
+			if err != nil {
+				fmt.Printf("Failed to load schema file from URL: %v\n", err)
+				os.Exit(1)
+			}
+			schema = s
 		}
-		schema, err := LoadYAMLSchema(schemaFile)
-		if err != nil {
-			fmt.Printf("Failed to load schema file: %v\n", err)
-			os.Exit(1)
+		var fileToBeValidated []byte
+		if strings.Contains(yamlFile, "http") {
+			f, err := LoadYAMLFromURL(yamlFile)
+			if err != nil {
+				fmt.Printf("Failed to load YAML file from URL: %v\n", err)
+				os.Exit(1)
+			}
+			fileToBeValidated = f
+		} else {
+			f, err := LoadYAMLFile(yamlFile)
+			if err != nil {
+				fmt.Printf("Failed to load YAML file: %v\n", err)
+				os.Exit(1)
+			}
+			fileToBeValidated = f
 		}
-
 		if err := ValidateYAML(fileToBeValidated, schema); err != nil {
 			fmt.Printf("Validation failed: %v\n", err)
 			os.Exit(1)
@@ -172,5 +195,6 @@ var validateCmd = &cobra.Command{
 
 func init() {
 	validateCmd.Flags().StringVarP(&schemaFile, "schema", "s", "", "Path to the JSON Schema file")
+	validateCmd.Flags().StringVarP(&schemaUrl, "schema-url", "u", "", "URL to the JSON Schema file")
 	rootCmd.AddCommand(validateCmd)
 }
