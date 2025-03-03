@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
@@ -41,6 +42,7 @@ func ValidateYAML(fileToBeValidated []byte, schema string, args ...io.Writer) er
 		return ErrInvalidYAML
 	}
 	if !result.Valid() {
+		fmt.Fprintf(w, "The document is not valid. Errors:\n")
 		for _, desc := range result.Errors() {
 			fmt.Fprintf(w, "- %s\n", desc)
 		}

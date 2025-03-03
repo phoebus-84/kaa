@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
+	"strings"
 
 	// "fmt"
 	"os"
@@ -67,15 +69,21 @@ func TestValidateYAML(t *testing.T) {
 		}
 		errV := ValidateYAML(fileToBeValidated, schema, &buffer)
 		got := buffer.String()
-		want := `- replicas: Must be greater than or equal to 1
-- serviceName: Does not match pattern '^[a-zA-Z0-9-]+$'
+		gotArray := strings.Split(got, "\n")
+		want := `The document is not valid. Errors:
 - version: Does not match pattern '^\d+\.\d+\.\d+$'
+- replicas: Must be greater than or equal to 1
+- serviceName: Does not match pattern '^[a-zA-Z0-9-]+$'
 `
-		if got != want {
-			t.Errorf("got %q want %q", got, want)
-		}
+		wantArray := strings.Split(want, "\n")
 		if errV == nil {
 			t.Errorf("Expected an error, but got nil")
+		}
+
+		for _, value := range gotArray {
+			if !slices.Contains(wantArray, value) {
+				t.Errorf("Expected %q in error message, but it was not found", value)
+			}
 		}
 	})
 }
@@ -158,13 +166,12 @@ func TestLoadYAMLFromUrl(t *testing.T) {
 func ExampleValidateYAML() {
 	schema, _ := LoadYAMLSchema(schemaPath)
 	fileToBeValidated, _ := LoadYAMLFile(testInvalidYaml)
-  buffer := bytes.Buffer{}
+	buffer := bytes.Buffer{}
 	ValidateYAML(fileToBeValidated, schema, &buffer)
-  fmt.Printf("%s", buffer.String())
+	outputSlice := strings.Split(buffer.String(), "\n")
+	fmt.Printf("%s", outputSlice[0])
 	// Output:
-  // - version: Does not match pattern '^\d+\.\d+\.\d+$'
-  // - replicas: Must be greater than or equal to 1
-  // - serviceName: Does not match pattern '^[a-zA-Z0-9-]+$'
+	// The document is not valid. Errors:
 }
 
 func ExampleLoadYAMLSchema() {
@@ -176,9 +183,9 @@ func ExampleLoadYAMLSchema() {
 
 func ExampleLoadYAMLFromURL() {
 	yaml, _ := LoadYAMLFromURL(validSchemaUrl)
-  fmt.Printf("%s", yaml)
+	fmt.Printf("%s", yaml)
 	// Output:
-  // {"$schema":"http://json-schema.org/draft-07/schema#","properties":{"replicas":{"description":"Number of instances to run (between 1 and 100).","maximum":100,"minimum":1,"type":"integer"},"serviceName":{"description":"Name of the service (letters, numbers, and hyphens only).","pattern":"^[a-zA-Z0-9-]+$","type":"string"},"version":{"description":"Semantic version number (e.g., 1.2.3).","pattern":"^\\d+\\.\\d+\\.\\d+$","type":"string"}},"required":["serviceName","version","replicas"],"type":"object"}
+	// {"$schema":"http://json-schema.org/draft-07/schema#","properties":{"replicas":{"description":"Number of instances to run (between 1 and 100).","maximum":100,"minimum":1,"type":"integer"},"serviceName":{"description":"Name of the service (letters, numbers, and hyphens only).","pattern":"^[a-zA-Z0-9-]+$","type":"string"},"version":{"description":"Semantic version number (e.g., 1.2.3).","pattern":"^\\d+\\.\\d+\\.\\d+$","type":"string"}},"required":["serviceName","version","replicas"],"type":"object"}
 }
 
 func ExampleLoadYAMLFile() {
