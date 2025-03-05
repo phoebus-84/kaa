@@ -1,4 +1,4 @@
-module forkbomb.eu/kaa
+module github.com/phoebus-84/kaa
 
 go 1.24.0
 
