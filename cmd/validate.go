@@ -1,16 +1,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"strings"
-
 	"github.com/spf13/cobra"
-	"github.com/xeipuuv/gojsonschema"
-	"gopkg.in/yaml.v3"
+	v "github.com/phoebus-84/Validation"
 )
 
 type ValidationErr string
@@ -27,107 +22,7 @@ const (
 	ErrJSONMarshal    = ValidationErr("Cannot marshal YAML into JSON")
 )
 
-func ValidateYAML(fileToBeValidated []byte, schema string, args ...io.Writer) error {
-	var w io.Writer
-	if len(args) < 1 {
-		w = os.Stdout
-	} else {
-		w = args[0]
-	}
-	schemaLoader := gojsonschema.NewStringLoader(schema)
-	documentLoader := gojsonschema.NewBytesLoader(fileToBeValidated)
-	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
-	if err != nil {
-		fmt.Fprintf(w, "Error validating YAML: %v\n", err)
-		return ErrInvalidYAML
-	}
-	if !result.Valid() {
-		fmt.Fprintf(w, "The document is not valid. Errors:\n")
-		for _, desc := range result.Errors() {
-			fmt.Fprintf(w, "- %s\n", desc)
-		}
-		return ErrInvalidYAML
-	}
-	return nil
-}
 
-func LoadYAMLFile(path string) ([]byte, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	if len(data) == 0 {
-		return nil, ErrEmptyFile
-	}
-	var content map[string]interface{}
-	if err := yaml.Unmarshal(data, &content); err != nil {
-		return nil, ErrUnmarshalError
-	}
-	jsonBytes, err := json.Marshal(content)
-	if err != nil {
-		return nil, ErrJSONMarshal
-	}
-	return jsonBytes, nil
-}
-
-func LoadYAMLSchema(path string) (string, error) {
-	jsonBytes, err := LoadYAMLFile(path)
-	switch err {
-	case ErrEmptyFile:
-		return "", ErrEmptyFile
-	case ErrUnmarshalError:
-		return "", ErrInvalidSchema
-	case ErrJSONMarshal:
-		return "", ErrJSONMarshal
-	case nil:
-		return string(jsonBytes), nil
-	default:
-		return "", err
-	}
-}
-
-func LoadYAMLFromURL(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to GET from URL %q: %w", url, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received non-OK HTTP status %s from URL %q", resp.Status, url)
-	}
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body from URL %q: %w", url, err)
-	}
-	if len(data) == 0 {
-		return nil, ErrEmptyFile
-	}
-	var content map[string]interface{}
-	if err := yaml.Unmarshal(data, &content); err != nil {
-		return nil, ErrUnmarshalError
-	}
-	jsonBytes, err := json.Marshal(content)
-	if err != nil {
-		return nil, ErrJSONMarshal
-	}
-	return jsonBytes, nil
-}
-
-func LoadYAMLSchemaFromURL(url string) (string, error) {
-	jsonBytes, err := LoadYAMLFromURL(url)
-	switch err {
-	case ErrEmptyFile:
-		return "", ErrEmptyFile
-	case ErrUnmarshalError:
-		return "", ErrInvalidSchema
-	case ErrJSONMarshal:
-		return "", ErrJSONMarshal
-	case nil:
-		return string(jsonBytes), nil
-	default:
-		return "", err
-	}
-}
 
 var schemaFile string
 var schemaUrl string
@@ -145,14 +40,14 @@ var validateCmd = &cobra.Command{
 		}
 		var schema string
 		if schemaFile != "" {
-			s, err := LoadYAMLSchema(schemaFile)
+			s, err := v.LoadYAMLSchema(schemaFile)
 			if err != nil {
 				fmt.Printf("Failed to load schema file: %v\n", err)
 				os.Exit(1)
 			}
 			schema = s
 		} else {
-			s, err := LoadYAMLSchemaFromURL(schemaUrl)
+			s, err := v.LoadYAMLSchemaFromURL(schemaUrl)
 			if err != nil {
 				fmt.Printf("Failed to load schema file from URL: %v\n", err)
 				os.Exit(1)
@@ -161,21 +56,21 @@ var validateCmd = &cobra.Command{
 		}
 		var fileToBeValidated []byte
 		if strings.Contains(yamlFile, "http") {
-			f, err := LoadYAMLFromURL(yamlFile)
+			f, err := v.LoadYAMLFromURL(yamlFile)
 			if err != nil {
 				fmt.Printf("Failed to load YAML file from URL: %v\n", err)
 				os.Exit(1)
 			}
 			fileToBeValidated = f
 		} else {
-			f, err := LoadYAMLFile(yamlFile)
+			f, err := v.LoadYAMLFile(yamlFile)
 			if err != nil {
 				fmt.Printf("Failed to load YAML file: %v\n", err)
 				os.Exit(1)
 			}
 			fileToBeValidated = f
 		}
-		if err := ValidateYAML(fileToBeValidated, schema); err != nil {
+		if err := v.ValidateYAML(fileToBeValidated, schema); err != nil {
 			fmt.Printf("Validation failed: %v\n", err)
 			os.Exit(1)
 		} else {
